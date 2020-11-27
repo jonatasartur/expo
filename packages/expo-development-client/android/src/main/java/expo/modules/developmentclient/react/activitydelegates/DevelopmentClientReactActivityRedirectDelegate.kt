@@ -1,4 +1,4 @@
-package expo.modules.developmentclient.react
+package expo.modules.developmentclient.react.activitydelegates
 
 import android.content.Intent
 import android.os.Bundle
@@ -11,5 +11,6 @@ class DevelopmentClientReactActivityRedirectDelegate(
 
   override fun onCreate(savedInstanceState: Bundle?) {
     redirect(plainActivity.intent)
+    plainActivity.finish()
   }
 }

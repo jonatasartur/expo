@@ -3,7 +3,6 @@ package expo.modules.developmentclient
 import android.app.Application
 import android.content.Context
 import android.content.Intent
-import android.os.Looper
 import androidx.annotation.UiThread
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate
@@ -12,17 +11,16 @@ import expo.modules.developmentclient.helpers.getFieldInClassHierarchy
 import expo.modules.developmentclient.helpers.runBlockingOnMainThread
 import expo.modules.developmentclient.launcher.DevelopmentClientActivity
 import expo.modules.developmentclient.launcher.DevelopmentClientHost
+import expo.modules.developmentclient.launcher.DevelopmentClientIntentRegistry
 import expo.modules.developmentclient.launcher.DevelopmentClientLifecycle
 import expo.modules.developmentclient.launcher.ReactActivityDelegateSupplier
 import expo.modules.developmentclient.launcher.loaders.DevelopmentClientExpoAppLoader
 import expo.modules.developmentclient.launcher.loaders.DevelopmentClientReactNativeAppLoader
 import expo.modules.developmentclient.launcher.manifest.DevelopmentClientManifestParser
-import expo.modules.developmentclient.react.DevelopmentClientReactActivityNOPDelegate
-import expo.modules.developmentclient.react.DevelopmentClientReactActivityRedirectDelegate
-import kotlinx.coroutines.Dispatchers
+import expo.modules.developmentclient.react.activitydelegates.DevelopmentClientReactActivityNOPDelegate
+import expo.modules.developmentclient.react.activitydelegates.DevelopmentClientReactActivityRedirectDelegate
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient
 import java.net.URLDecoder
 
@@ -40,6 +38,7 @@ class DevelopmentClientController private constructor(
   val devClientHost = DevelopmentClientHost((mContext as Application), DEV_LAUNCHER_HOST)
   private val httpClient = OkHttpClient()
   private val lifecycle = DevelopmentClientLifecycle()
+  val pendingIntentRegistry = DevelopmentClientIntentRegistry()
 
   enum class Mode {
     LAUNCHER, APP
@@ -84,12 +83,12 @@ class DevelopmentClientController private constructor(
     mContext.applicationContext.startActivity(createLauncherIntent())
   }
 
-  fun handleIntent(intent: Intent?, activityToBeInvalidated: ReactActivity?): Boolean {
+  private fun handleIntent(intent: Intent?, activityToBeInvalidated: ReactActivity?): Boolean {
     intent
       ?.data
       ?.let { uri ->
         if ("expo-development-client" != uri.host) {
-          return false
+          return handleExternalIntent(intent)
         }
 
         if (uri.getQueryParameter("url") == null) {
@@ -104,6 +103,15 @@ class DevelopmentClientController private constructor(
         return true
       }
     return false
+  }
+
+  private fun handleExternalIntent(intent: Intent): Boolean {
+    if (mode == Mode.APP) {
+      return false
+    }
+
+    pendingIntentRegistry.intent = intent
+    return true
   }
 
   private fun ensureHostWasCleared(host: ReactNativeHost, activityToBeInvalidated: ReactActivity? = null) {
@@ -154,6 +162,22 @@ class DevelopmentClientController private constructor(
       .apply { addFlags(NEW_ACTIVITY_FLAGS) }
 
   private fun createAppIntent() =
+    createBasicAppIntent().apply {
+      pendingIntentRegistry
+        .consumePendingIntent()
+        ?.let { intent ->
+          action = intent.action
+          data = intent.data
+          intent.extras?.let {
+            putExtras(it)
+          }
+          intent.categories?.let {
+            categories.addAll(it)
+          }
+        }
+    }
+
+  private fun createBasicAppIntent() =
     if (sLauncherClass == null) {
       checkNotNull(
         mContext
