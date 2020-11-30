@@ -9,7 +9,7 @@ import com.facebook.react.modules.core.DeviceEventManagerModule.RCTDeviceEventEm
 import expo.modules.developmentclient.DevelopmentClientController.Companion.instance
 import kotlinx.coroutines.runBlocking
 
-private const val ON_NEW_DEEP_LINK_EVENT = "expo.modules.developmentclient.onnewdeeplinkevnet"
+private const val ON_NEW_DEEP_LINK_EVENT = "expo.modules.developmentclient.onnewdeeplink"
 
 class DevelopmentClientModule(reactContext: ReactApplicationContext?) : ReactContextBaseJavaModule(reactContext) {
   override fun initialize() {

@@ -2,7 +2,6 @@
 
 #import <UMReactNativeAdapter/UMModuleRegistryAdapter.h>
 
-
 @interface EXDevelopmentClientController ()
 
 @property (nonatomic, weak) UIWindow *window;

@@ -48,7 +48,7 @@ const Button = ({ label, onPress }) => (
 // on features to support
 //
 
-const ON_NEW_DEEP_LINK_EVENT = 'expo.modules.developmentclient.onnewdeeplinkevnet';
+const ON_NEW_DEEP_LINK_EVENT = 'expo.modules.developmentclient.onnewdeeplink';
 
 const App = () => {
   const [scanning, setScanning] = React.useState(false);

@@ -11,7 +11,7 @@
 #import "EXDevelopmentClientRCTBridge.m"
 #import "EXDevelopmentClientManifestParser.h"
 
-#import <UIKit/UIKit.h>
+#import <expo_development_client-Swift.h>
 
 // Uncomment the below and set it to a React Native bundler URL to develop the launcher JS
 //#define DEV_LAUNCHER_URL "http://10.0.0.176:8090/index.bundle?platform=ios&dev=true&minify=false"
@@ -36,6 +36,7 @@ NSString *fakeLauncherBundleUrl = @"embedded://exdevelopmentclient/dummy";
 - (instancetype)init {
   if (self = [super init]) {
     self.moduleRegistryAdapter = [[UMModuleRegistryAdapter alloc] initWithModuleRegistryProvider:[[UMModuleRegistryProvider alloc] init]];
+    self.pendingDeepLinkRegistry = [EXDevelopmentClientPendingDeepLinkRegistry new];
   }
   return self;
 }
@@ -76,6 +77,18 @@ NSString *fakeLauncherBundleUrl = @"embedded://exdevelopmentclient/dummy";
 
 #endif
 
+- (NSDictionary<UIApplicationLaunchOptionsKey, NSObject*> *)getLaunchOptions;
+{
+  NSURL *deepLink = self.pendingDeepLinkRegistry.pendingDeepLink;
+  if (!deepLink) {
+    return nil;
+  }
+  
+  return @{
+    UIApplicationLaunchOptionsURLKey: deepLink
+  };
+}
+
 - (void)startWithWindow:(UIWindow *)window delegate:(id<EXDevelopmentClientControllerDelegate>)delegate launchOptions:(NSDictionary *)launchOptions
 {
   _delegate = delegate;
@@ -105,7 +118,7 @@ NSString *fakeLauncherBundleUrl = @"embedded://exdevelopmentclient/dummy";
 
 - (BOOL)onDeepLink:(NSURL *)url options:(NSDictionary *)options {
   if (![url.host isEqual:@"expo-development-client"]) {
-    return false;
+    return [self _handleExternalDeepLink:url options:options];
   }
   
   NSURLComponents *urlComponets = [NSURLComponents componentsWithURL:url resolvingAgainstBaseURL:NO];
@@ -119,6 +132,16 @@ NSString *fakeLauncherBundleUrl = @"embedded://exdevelopmentclient/dummy";
   }
   
   [self navigateToLauncher];
+  return true;
+}
+
+- (BOOL)_handleExternalDeepLink:(NSURL *)url options:(NSDictionary *)options
+{
+  if ([self _isAppRunning]) {
+    return false;
+  }
+  
+  self.pendingDeepLinkRegistry.pendingDeepLink = url;
   return true;
 }
 
@@ -177,4 +200,10 @@ NSString *fakeLauncherBundleUrl = @"embedded://exdevelopmentclient/dummy";
   return UIInterfaceOrientationUnknown;
 }
 
+- (BOOL)_isAppRunning
+{
+  return [_appBridge isValid];
+}
+
 @end
+
